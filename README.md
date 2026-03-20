@@ -1,118 +1,80 @@
-# Tian Chatbot Frontend
+# Tian Chatbot — Frontend
 
-Vue 3 chat interface for the Tian Chatbot application. Connects to the backend via SSE for real-time streaming AI responses.
+Vue 3 single-page app for the “研究メンターAI” (Research Mentor AI) chat. It uses the browser `EventSource` API for SSE streaming, Markdown rendering (Marked + DOMPurify), and `localStorage` for `chatId` session continuity.
 
-## Overview
+## Stack
 
-The frontend provides a chat room UI for the "研究メンターAI" (Research Mentor AI) assistant. It supports streaming responses with typewriter effect, Markdown rendering, and session management via `chatId`.
+| Item | Technology |
+|------|------------|
+| UI | Vue 3 |
+| Build | Vite 5 |
+| Streaming | Native `EventSource` |
+| Markdown | Marked, DOMPurify |
 
-## Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| Framework | Vue 3 |
-| Build Tool | Vite 5 |
-| HTTP/SSE | Axios, native EventSource |
-| Markdown | Marked |
-| Sanitization | DOMPurify |
-
-## Project Structure
+## Layout
 
 ```
 tian-chatbot-frontend/
 ├── src/
 │   ├── components/
-│   │   ├── ChatRoom.vue        # Main chat UI
-│   │   └── MarkdownContent.vue # Markdown renderer with DOMPurify
-│   ├── utils/
-│   │   └── chatId.js           # chatId generation and localStorage
-│   ├── config.js               # API base URL and endpoints
+│   │   ├── ChatRoom.vue
+│   │   └── MarkdownContent.vue
+│   ├── utils/chatId.js
+│   ├── config.js          # API base URL + chat path
 │   ├── App.vue
 │   └── main.js
+├── nginx/default.conf     # Used by Docker image only
 ├── public/
-├── index.html
 ├── vite.config.js
 └── package.json
 ```
 
-## Quick Start
+## Quick start
 
-### Prerequisites
-
-- Node.js 18+
-- npm
-
-### 1. Install Dependencies
+**Prerequisites:** Node.js 18+, npm. Backend should be on port 8080 for local dev.
 
 ```bash
 npm install
-```
-
-### 2. Start Development Server
-
-```bash
 npm run dev
 ```
 
-The app runs at `http://localhost:5173`.
+Dev server: `http://localhost:5173` — `/api` is proxied to `http://localhost:8080` (see `vite.config.js`).
 
-> **Note:** Ensure the backend is running at `http://localhost:8080`. Vite proxies `/api` to the backend.
-
-### 3. Build for Production
+### Production build
 
 ```bash
 npm run build
 ```
 
-Output is in `dist/`. Preview with `npm run preview`.
+Output: `dist/`. Preview: `npm run preview`.
+
+## Environment variables
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `VITE_API_BASE_URL` | API prefix or full backend URL | `/api` |
+
+- **Local + Docker (this repo):** default `/api` is correct — Vite or Nginx forwards it to the backend.
+- **Split hosting (e.g. static on CDN, API elsewhere):** set at build time, e.g. `VITE_API_BASE_URL=https://api.example.com` (you will need CORS on the backend).
+
+Create `.env` in this folder if you need overrides (see `.env.example`).
 
 ## Features
 
-- **Chat interface:** User messages on the right, AI messages on the left
-- **chatId management:** Auto-generated on first visit, stored in `localStorage`
-- **New session:** "新規チャット" button creates a new `chatId` and clears history
-- **SSE streaming:** Real-time typewriter effect for AI responses
-- **Markdown rendering:** AI replies rendered with Marked, sanitized with DOMPurify
-- **URL encoding:** `URLSearchParams` for correct handling of Chinese and special characters
+- Chat bubbles (user right, assistant left)
+- New session button → new `chatId`, cleared messages
+- SSE “typewriter” streaming for assistant text
+- Sanitized Markdown for assistant replies
+- `URLSearchParams` for safe query encoding
 
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VITE_API_BASE_URL` | Backend API base URL | Dev: `/api` (proxy); Prod: `http://localhost:8080` |
-
-Create `.env` in the project root to override:
-
-```env
-VITE_API_BASE_URL=http://your-backend-url:8080
-```
-
-## Development
-
-### Proxy Configuration
-
-In `vite.config.js`, `/api` is proxied to `http://localhost:8080`:
-
-```js
-proxy: {
-  '/api': {
-    target: 'http://localhost:8080',
-    changeOrigin: true,
-    rewrite: (path) => path.replace(/^\/api/, '')
-  }
-}
-```
-
-### API Endpoint
-
-`config.js` defines the chat endpoint:
-
-- `CHAT_ENDPOINT`: `${API_BASE}/ai/chatbot/lantian`
-
-### Scripts
+## Scripts
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | Start dev server (port 5173) |
-| `npm run build` | Production build |
-| `npm run preview` | Preview production build |
+| `npm run dev` | Dev server (5173) |
+| `npm run build` | Production bundle |
+| `npm run preview` | Serve `dist` locally |
+
+## Docker
+
+The frontend image builds static assets with `VITE_API_BASE_URL=/api` and serves them with Nginx, proxying `/api/` to the backend service. See root `docker-compose.yml` and `Dockerfile` in this module.
